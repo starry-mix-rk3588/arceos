@@ -13,6 +13,7 @@ use core::{
 };
 
 use axhal::context::TaskContext;
+use axhal::context::TrapFrame;
 #[cfg(feature = "tls")]
 use axhal::tls::TlsArea;
 use futures::task::AtomicWaker;
@@ -207,6 +208,28 @@ impl TaskInner {
             Some(s) => Some(s.top()),
             None => None,
         }
+    }
+
+    pub fn set_trap_context(&self, trap_frame: TrapFrame) {
+        let addr: usize = self.kernel_stack_top().unwrap().as_usize();
+        let trap_frame_size = core::mem::size_of::<TrapFrame>() + 8;
+        let addr = addr - trap_frame_size;
+        let tf_ptr: *mut TrapFrame = addr as *mut TrapFrame;
+        unsafe {
+            // 写入 trap_frame
+            *tf_ptr = trap_frame;
+        }
+        // debug!("src: {:#?}", trap_frame);
+        // unsafe {
+        //     let dest_frame: &TrapFrame = &*tf_ptr;
+        //     debug!("dest: {:#?}", dest_frame);
+        // }
+    }
+
+    pub fn get_stack_bottom(&self) -> usize {
+        let addr: usize = self.kernel_stack_top().unwrap().as_usize();
+        let trap_frame_size = core::mem::size_of::<TrapFrame>() + 8;
+        addr - trap_frame_size
     }
 
     /// Gets the cpu affinity mask of the task.
