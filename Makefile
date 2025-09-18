@@ -141,7 +141,7 @@ LD := rust-lld -flavor gnu
 
 OBJDUMP ?= rust-objdump -d --print-imm-hex --x86-asm-syntax=intel
 ifeq ($(ARCH), aarch64)
-OBJCOPY ?= aarch64-linux-gnu-objcopy
+OBJCOPY ?= aarch64-linux-musl-objcopy
 else
 OBJCOPY ?= rust-objcopy --binary-architecture=$(ARCH)
 endif
