@@ -88,7 +88,7 @@ cfg_if::cfg_if! {
             fn probe_global() -> Option<AxDeviceEnum> {
                 // FIXME: this configuration is specific to vf2!
                 let root = "root".parse().unwrap();
-                let sdmmc = unsafe { SdMmcDriver::new(phys_to_virt(0x1602_0000.into()).into()) };
+                let sdmmc = unsafe { SdMmcDriver::new(phys_to_virt(0xfe2c0000.into()).into()) };
                 GptPartitionDev::try_new(sdmmc, |_, part| part.name == root)
                     .ok()
                     .map(AxDeviceEnum::from_block)
