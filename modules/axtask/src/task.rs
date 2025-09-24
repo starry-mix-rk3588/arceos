@@ -13,7 +13,7 @@ use core::{
 };
 
 use axhal::context::TaskContext;
-use axhal::context::TrapFrame;
+// use axhal::context::TrapFrame;
 #[cfg(feature = "tls")]
 use axhal::tls::TlsArea;
 use futures::task::AtomicWaker;
