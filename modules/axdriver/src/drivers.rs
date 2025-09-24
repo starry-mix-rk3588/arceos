@@ -87,8 +87,10 @@ cfg_if::cfg_if! {
         impl DriverProbe for SdMmcGptDriver {
             fn probe_global() -> Option<AxDeviceEnum> {
                 // FIXME: this configuration is specific to vf2!
-                let root = "root".parse().unwrap();
-                let sdmmc = unsafe { SdMmcDriver::new(phys_to_virt(0x1602_0000.into()).into()) };
+                let root = axconfig::devices::ROOT_PARTITION_NAME.parse().unwrap();
+                let sdmmc_paddr = axconfig::devices::SDMMC_PADDR;
+                debug!("sdmmc probe, paddr: {sdmmc_paddr}, root partition name: {root}");
+                let sdmmc = unsafe { SdMmcDriver::new(phys_to_virt(sdmmc_paddr.into()).into()) };
                 GptPartitionDev::try_new(sdmmc, |_, part| part.name == root)
                     .ok()
                     .map(AxDeviceEnum::from_block)

@@ -31,7 +31,7 @@ virtio-input = ["input", "virtio", "axdriver_virtio/input"]
 virtio-net = ["net", "virtio", "axdriver_virtio/net"]
 bcm2835-sdhci = ["block", "axdriver_block/bcm2835-sdhci"]
 ramdisk = ["block", "axdriver_block/ramdisk", "dep:axhal", "dep:axconfig"]
-sdmmc-gpt = ["block", "axdriver_block/sdmmc", "axdriver_block/gpt", "dep:axhal"]
+sdmmc-gpt = ["block", "axdriver_block/sdmmc", "axdriver_block/gpt", "dep:axhal", "dep:axconfig"]
 ahci-gpt = [
     "block",
     "axdriver_block",
