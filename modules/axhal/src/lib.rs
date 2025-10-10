@@ -71,7 +71,7 @@ pub mod paging;
 
 /// Console input and output.
 pub mod console {
-    pub use axplat::console::{get_console_irq, read_bytes, write_bytes};
+    pub use axplat::console::{irq_number, read_bytes, write_bytes};
 }
 
 /// CPU power management.
@@ -100,12 +100,7 @@ pub mod context {
 
 /// User mode support.
 #[cfg(feature = "uspace")]
-pub mod uspace {
-    pub use axcpu::{
-        trap::{ExceptionKind, ReturnReason},
-        uspace::UserContext,
-    };
-}
+pub use axcpu::uspace;
 
 pub use axcpu::asm;
 pub use axplat::init::init_later;

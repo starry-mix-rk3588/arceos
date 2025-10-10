@@ -13,7 +13,8 @@ use axfs_ng_vfs::{
     FileNode, Location, NodeFlags, NodePermission, NodeType, VfsError, VfsResult, path::Path,
 };
 use axhal::mem::{PhysAddr, VirtAddr, virt_to_phys};
-use axio::{Buf, BufMut, IoEvents, Pollable, SeekFrom};
+use axio::{Buf, BufMut, SeekFrom};
+use axpoll::{IoEvents, Pollable};
 use intrusive_collections::{LinkedList, LinkedListAtomicLink, intrusive_adapter};
 use log::warn;
 use lru::LruCache;
@@ -876,6 +877,22 @@ impl File {
     pub fn flush(&self) -> axio::Result {
         self.access(FileFlags::empty())?;
         Ok(())
+    }
+}
+
+impl<'a> axio::Read for &'a File {
+    fn read(&mut self, mut buf: &mut [u8]) -> axio::Result<usize> {
+        (*self).read(&mut buf)
+    }
+}
+
+impl<'a> axio::Write for &'a File {
+    fn write(&mut self, mut buf: &[u8]) -> axio::Result<usize> {
+        (*self).write(&mut buf)
+    }
+
+    fn flush(&mut self) -> axio::Result {
+        (*self).flush()
     }
 }
 
