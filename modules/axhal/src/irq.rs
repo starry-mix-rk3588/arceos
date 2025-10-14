@@ -10,7 +10,7 @@ pub use axplat::irq::{IpiTarget, send_ipi};
 pub use axplat::irq::{handle, register, set_enable, unregister};
 use axpoll::PollSet;
 
-static POLL_TABLE: [PollSet; 0x30] = [const { PollSet::new() }; 0x30];
+static POLL_TABLE: [PollSet; 0x400] = [const { PollSet::new() }; 0x400];
 fn poll_handler(irq: usize) {
     POLL_TABLE[irq].wake();
 }
