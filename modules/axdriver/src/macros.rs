@@ -92,5 +92,15 @@ macro_rules! for_each_drivers {
             type $drv_type = crate::drivers::FXmacDriver;
             $code
         }
+        #[cfg(net_dev = "gmac")]
+        {
+            type $drv_type = crate::drivers::GmacDriver;
+            $code
+        }
+        #[cfg(net_dev = "rtl8169")]
+        {
+            type $drv_type = crate::drivers::Rtl8169Driver;
+            $code
+        }
     }};
 }

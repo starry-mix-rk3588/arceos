@@ -1,4 +1,4 @@
-const NET_DEV_FEATURES: &[&str] = &["fxmac", "ixgbe", "virtio-net"];
+const NET_DEV_FEATURES: &[&str] = &["fxmac", "ixgbe", "virtio-net", "gmac", "rtl8169"];
 const BLOCK_DEV_FEATURES: &[&str] = &["ramdisk", "bcm2835-sdhci", "sdmmc-gpt", "ahci-gpt", "virtio-blk"];
 const DISPLAY_DEV_FEATURES: &[&str] = &["virtio-gpu"];
 const INPUT_DEV_FEATURES: &[&str] = &["virtio-input"];

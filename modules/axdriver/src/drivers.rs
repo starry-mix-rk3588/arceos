@@ -305,3 +305,173 @@ cfg_if::cfg_if! {
         }
     }
 }
+
+cfg_if::cfg_if! {
+    if #[cfg(net_dev = "gmac")] {
+    use axalloc::{UsageKind, global_allocator};
+    use axhal::mem::PAGE_SIZE_4K;
+
+    #[crate_interface::impl_interface]
+    impl axdriver_net::gmac::KernelFunc for GmacDriver {
+        fn virt_to_phys(addr: usize) -> usize {
+            axhal::mem::virt_to_phys(addr.into()).into()
+        }
+
+        fn phys_to_virt(addr: usize) -> usize {
+            axhal::mem::phys_to_virt(addr.into()).into()
+        }
+
+        fn dma_alloc_coherent(pages: usize) -> (usize, usize) {
+            let Ok(vaddr) = global_allocator().alloc_pages(pages, PAGE_SIZE_4K, UsageKind::Dma) else {
+                error!("GMAC: failed to alloc {} pages for DMA", pages);
+                return (0, 0);
+            };
+            let paddr = axhal::mem::virt_to_phys((vaddr).into());
+            debug!("GMAC DMA alloc: vaddr={:#x}, paddr={:#x}, pages={}", vaddr, paddr, pages);
+            (vaddr, paddr.as_usize())
+        }
+
+        fn dma_free_coherent(vaddr: usize, pages: usize) {
+            debug!("GMAC DMA free: vaddr={:#x}, pages={}", vaddr, pages);
+            global_allocator().dealloc_pages(vaddr, pages, UsageKind::Dma);
+        }
+    }
+
+    register_net_driver!(GmacDriver, axdriver_net::gmac::GmacNic);
+
+    pub struct GmacDriver;
+    impl DriverProbe for GmacDriver {
+        fn probe_global() -> Option<AxDeviceEnum> {
+            info!("RK3588 GMAC driver probe (polling mode)");
+            const GMAC_BASE: usize = 0xf3100000;
+            const GMAC_SIZE: usize = 0x10000;
+
+            let gmac_vaddr = phys_to_virt(GMAC_BASE.into()).as_usize();
+            info!("GMAC base: phys={:#x}, virt={:#x}", GMAC_BASE, gmac_vaddr);
+
+            unsafe {
+                let version = ((gmac_vaddr + 0x20) as *const u32).read_volatile();
+                info!("GMAC MAC_VERSION register: {:#x}", version);
+
+                // Synopsys DWC MAC 4.20a 的版本号应该是 0x42 或类似值
+                if version == 0 || version == 0xffffffff {
+                    error!("GMAC not powered or clocked! Need platform init.");
+                    return None;
+                }
+            }
+
+            axdriver_net::gmac::GmacNic::init(gmac_vaddr, GMAC_SIZE)
+                .ok()
+                .map(AxDeviceEnum::from_net)
+        }
+    }
+    }
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(net_dev = "rtl8169")] {
+    use axalloc::{UsageKind, global_allocator};
+    use axhal::mem::PAGE_SIZE_4K;
+
+    #[crate_interface::impl_interface]
+    impl axdriver_net::rtl8169::KernelFunc for Rtl8169Driver {
+        fn virt_to_phys(addr: usize) -> usize {
+            axhal::mem::virt_to_phys(addr.into()).into()
+        }
+
+        fn dma_alloc_coherent(pages: usize) -> (usize, usize) {
+            let Ok(vaddr) = global_allocator().alloc_pages(pages, PAGE_SIZE_4K, UsageKind::Dma) else {
+                error!("RTL8169: failed to alloc {} pages for DMA", pages);
+                return (0, 0);
+            };
+            let paddr = axhal::mem::virt_to_phys((vaddr).into());
+            debug!("RTL8169 DMA alloc: vaddr={:#x}, paddr={:#x}, pages={}", vaddr, paddr, pages);
+            (vaddr, paddr.as_usize())
+        }
+
+        fn dma_free_coherent(vaddr: usize, pages: usize) {
+            debug!("RTL8169 DMA free: vaddr={:#x}, pages={}", vaddr, pages);
+            global_allocator().dealloc_pages(vaddr, pages, UsageKind::Dma);
+        }
+    }
+
+    register_net_driver!(Rtl8169Driver, axdriver_net::rtl8169::Rtl8169Nic);
+
+    pub struct Rtl8169Driver;
+    impl DriverProbe for Rtl8169Driver {
+
+        fn probe_global() -> Option<AxDeviceEnum> {
+            info!("RK3588 RTL8169 driver probe (polling mode)");
+            const RTL8169_BASE: usize = 0xf3100000;
+            const RTL8169_SIZE: usize = 0x10000;
+
+            let rtl8169_vaddr = phys_to_virt(RTL8169_BASE.into()).as_usize();
+            info!("RTL8169 base: phys={:#x}, virt={:#x}", RTL8169_BASE, rtl8169_vaddr);
+
+            unsafe {
+                let version = ((rtl8169_vaddr + 0x20) as *const u32).read_volatile();
+                info!("RTL8169 MAC_VERSION register: {:#x}", version);
+
+                // Synopsys DWC MAC 4.20a 的版本号应该是 0x42 或类似值
+                if version == 0 || version == 0xffffffff {
+                    error!("RTL8169 not powered or clocked! Need platform init.");
+                    return None;
+                }
+            }
+
+            axdriver_net::rtl8169::Rtl8169Nic::init(rtl8169_vaddr, RTL8169_SIZE)
+                .ok()
+                .map(AxDeviceEnum::from_net)
+        }
+
+        #[cfg(bus = "pci")]
+        fn probe_pci(
+            root: &mut PciRoot,
+            bdf: DeviceFunction,
+            dev_info: &DeviceFunctionInfo,
+        ) -> Option<AxDeviceEnum> {
+            // Check if this is an RTL8169 device
+            // Vendor: RealTek (0x10EC)
+            // Device: 0x8167, 0x8168, 0x8169
+            if dev_info.vendor_id != 0x10EC {
+                return None;
+            }
+
+            match dev_info.device_id {
+                0x8167 | 0x8168 | 0x8169 => {
+                    info!(
+                        "RTL8169: Found device at {:?}, vendor={:#x}, device={:#x}",
+                        bdf, dev_info.vendor_id, dev_info.device_id
+                    );
+
+                    // Read BAR0 for MMIO base address
+                    let bar_info = root.bar_info(bdf, 0).unwrap();
+                    match bar_info {
+                        axdriver_pci::BarInfo::Memory {
+                            address,
+                            size,
+                            ..
+                        } => {
+                            let mmio_vaddr = phys_to_virt((address as usize).into()).as_usize();
+                            return axdriver_net::rtl8169::Rtl8169Nic::init(mmio_vaddr, size as usize)
+                            .ok()
+                            .map(AxDeviceEnum::from_net);
+                        }
+                        axdriver_pci::BarInfo::IO { .. } => {
+                            error!("ixgbe: BAR0 is of I/O type");
+                            return None;
+                        }
+                    }
+                }
+                _ => {
+                    error!(
+                        "RTL8169: Unsupported device ID {:#x} at {:?}",
+                        dev_info.device_id, bdf
+                    );
+                    None
+                },
+            }
+        }
+    }
+    }
+}

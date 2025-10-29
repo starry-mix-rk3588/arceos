@@ -74,8 +74,8 @@ VFIO_PCI ?=
 VHOST ?= n
 
 # Network options
-IP ?= 10.0.2.15
-GW ?= 10.0.2.2
+IP ?= 192.168.66.103
+GW ?= 192.168.66.1
 
 # App type
 ifeq ($(wildcard $(APP)),)
