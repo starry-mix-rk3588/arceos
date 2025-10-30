@@ -393,6 +393,10 @@ cfg_if::cfg_if! {
             debug!("RTL8169 DMA free: vaddr={:#x}, pages={}", vaddr, pages);
             global_allocator().dealloc_pages(vaddr, pages, UsageKind::Dma);
         }
+
+        fn get_system_ticks() -> u64 {
+            axhal::time::current_ticks()
+        }
     }
 
     register_net_driver!(Rtl8169Driver, axdriver_net::rtl8169::Rtl8169Nic);
