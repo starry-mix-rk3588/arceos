@@ -75,7 +75,7 @@ driver-ahci-gpt = ["axdriver/ahci-gpt"]
 driver-ixgbe = ["axdriver/ixgbe"]
 driver-fxmac = ["axdriver/fxmac"] # fxmac ethernet driver for PhytiumPi
 driver-gmac = ["axdriver/gmac"]
-driver-rtl8169 = ["axdriver/rtl8169"] # RTL8169 PCI Gigabit Ethernet driver
+driver-realtek = ["axdriver/realtek"] # realtek PCI Gigabit Ethernet driver
 driver-bcm2835-sdhci = ["axdriver/bcm2835-sdhci"]
 
 # Logging

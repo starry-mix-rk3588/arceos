@@ -43,7 +43,7 @@ ahci-gpt = [
 ixgbe = ["net", "axdriver_net/ixgbe", "dep:axalloc", "dep:axhal", "dep:axdma"]
 fxmac = ["net", "axdriver_net/fxmac", "dep:axalloc", "dep:axhal", "dep:axdma"]
 gmac = ["net", "axdriver_net/gmac", "dep:axalloc", "dep:axhal"]
-rtl8169 = ["net", "axdriver_net/rtl8169", "dep:axalloc", "dep:axhal"]
+realtek = ["net", "axdriver_net/realtek", "dep:axalloc", "dep:axhal"]
 # more devices example: e1000 = ["net", "axdriver_net/e1000"]
 
 [dependencies]

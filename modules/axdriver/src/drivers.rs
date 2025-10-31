@@ -369,64 +369,65 @@ cfg_if::cfg_if! {
 }
 
 cfg_if::cfg_if! {
-    if #[cfg(net_dev = "rtl8169")] {
-    use axalloc::{UsageKind, global_allocator};
+    if #[cfg(net_dev = "realtek")] {
+    use axalloc::global_allocator;
     use axhal::mem::PAGE_SIZE_4K;
 
     #[crate_interface::impl_interface]
-    impl axdriver_net::rtl8169::KernelFunc for Rtl8169Driver {
+    impl axdriver_net::realtek::KernelFunc for RealtekDriver {
         fn virt_to_phys(addr: usize) -> usize {
             axhal::mem::virt_to_phys(addr.into()).into()
         }
 
+        fn phys_to_virt(addr: usize) -> usize {
+            axhal::mem::phys_to_virt(addr.into()).into()
+        }
+
         fn dma_alloc_coherent(pages: usize) -> (usize, usize) {
-            let Ok(vaddr) = global_allocator().alloc_pages(pages, PAGE_SIZE_4K, UsageKind::Dma) else {
-                error!("RTL8169: failed to alloc {} pages for DMA", pages);
+            let Ok(vaddr) = global_allocator().alloc_pages(pages, PAGE_SIZE_4K, axalloc::UsageKind::Dma) else {
+                error!("realtek: failed to alloc {} pages for DMA", pages);
                 return (0, 0);
             };
             let paddr = axhal::mem::virt_to_phys((vaddr).into());
-            debug!("RTL8169 DMA alloc: vaddr={:#x}, paddr={:#x}, pages={}", vaddr, paddr, pages);
+            debug!("realtek DMA alloc: vaddr={:#x}, paddr={:#x}, pages={}", vaddr, paddr, pages);
             (vaddr, paddr.as_usize())
         }
 
         fn dma_free_coherent(vaddr: usize, pages: usize) {
-            debug!("RTL8169 DMA free: vaddr={:#x}, pages={}", vaddr, pages);
-            global_allocator().dealloc_pages(vaddr, pages, UsageKind::Dma);
+            debug!("realtek DMA free: vaddr={:#x}, pages={}", vaddr, pages);
+            global_allocator().dealloc_pages(vaddr, pages, axalloc::UsageKind::Dma);
         }
 
-        fn get_system_ticks() -> u64 {
-            axhal::time::current_ticks()
+        fn get_time_us() -> u64 {
+            let walltimenanos = axhal::time::wall_time_nanos();
+            walltimenanos / 1000
+        }
+
+        fn busy_wait(duration: core::time::Duration) {
+            axhal::time::busy_wait(duration);
         }
     }
 
-    register_net_driver!(Rtl8169Driver, axdriver_net::rtl8169::Rtl8169Nic);
+    register_net_driver!(RealtekDriver, axdriver_net::realtek::RealtekDriverNic);
 
-    pub struct Rtl8169Driver;
-    impl DriverProbe for Rtl8169Driver {
-
+    pub struct RealtekDriver;
+    impl DriverProbe for RealtekDriver {
+        #[cfg(not(bus = "pci"))]
         fn probe_global() -> Option<AxDeviceEnum> {
-            info!("RK3588 RTL8169 driver probe (polling mode)");
-            const RTL8169_BASE: usize = 0xf3100000;
-            const RTL8169_SIZE: usize = 0x10000;
+            info!("RK3588 realtek driver probe (polling mode)");
+            const REALTEK_BASE: usize = 0xf3100000;
+            const REALTEK_SIZE: usize = 0x10000;
+            const VENDOR_ID: u16 = 0x10EC; // RealTek
+            const DEVICE_ID: u16 = 0x8169; // RTL8169
 
-            let rtl8169_vaddr = phys_to_virt(RTL8169_BASE.into()).as_usize();
-            info!("RTL8169 base: phys={:#x}, virt={:#x}", RTL8169_BASE, rtl8169_vaddr);
+            let rtl8169_vaddr = axhal::mem::phys_to_virt(REALTEK_BASE.into()).as_usize();
+            info!("realtek base: phys={:#x}, virt={:#x}", REALTEK_BASE, rtl8169_vaddr);
 
-            unsafe {
-                let version = ((rtl8169_vaddr + 0x20) as *const u32).read_volatile();
-                info!("RTL8169 MAC_VERSION register: {:#x}", version);
-
-                // Synopsys DWC MAC 4.20a 的版本号应该是 0x42 或类似值
-                if version == 0 || version == 0xffffffff {
-                    error!("RTL8169 not powered or clocked! Need platform init.");
-                    return None;
-                }
-            }
-
-            axdriver_net::rtl8169::Rtl8169Nic::init(rtl8169_vaddr, RTL8169_SIZE)
+            axdriver_net::realtek::create_driver(VENDOR_ID, DEVICE_ID, rtl8169_vaddr, 0xea)
                 .ok()
                 .map(AxDeviceEnum::from_net)
         }
+
 
         #[cfg(bus = "pci")]
         fn probe_pci(
@@ -434,48 +435,31 @@ cfg_if::cfg_if! {
             bdf: DeviceFunction,
             dev_info: &DeviceFunctionInfo,
         ) -> Option<AxDeviceEnum> {
-            // Check if this is an RTL8169 device
-            // Vendor: RealTek (0x10EC)
-            // Device: 0x8167, 0x8168, 0x8169
-            if dev_info.vendor_id != 0x10EC {
+            // Check if this is an realtek device
+            if !axdriver_net::realtek::is_realtek_device(dev_info.vendor_id, dev_info.device_id) {
                 return None;
             }
 
-            match dev_info.device_id {
-                0x8167 | 0x8168 | 0x8169 => {
-                    info!(
-                        "RTL8169: Found device at {:?}, vendor={:#x}, device={:#x}",
-                        bdf, dev_info.vendor_id, dev_info.device_id
-                    );
+            let bar_info = root.bar_info(bdf, 1).unwrap();
+            info!("realtek: BAR0 info: {:?}", bar_info);
 
-                    // Read BAR0 for MMIO base address
-                    let bar_info = root.bar_info(bdf, 0).unwrap();
-                    match bar_info {
-                        axdriver_pci::BarInfo::Memory {
-                            address,
-                            size,
-                            ..
-                        } => {
-                            let mmio_vaddr = phys_to_virt((address as usize).into()).as_usize();
-                            return axdriver_net::rtl8169::Rtl8169Nic::init(mmio_vaddr, size as usize)
-                            .ok()
-                            .map(AxDeviceEnum::from_net);
-                        }
-                        axdriver_pci::BarInfo::IO { .. } => {
-                            error!("ixgbe: BAR0 is of I/O type");
-                            return None;
-                        }
-                    }
+            match bar_info {
+                axdriver_pci::BarInfo::Memory {
+                    address,
+                    size: _,
+                    ..
+                } => {
+                    let mmio_vaddr = axhal::mem::phys_to_virt((address as usize).into()).as_usize();
+                    return axdriver_net::realtek::create_driver(dev_info.vendor_id, dev_info.device_id, mmio_vaddr, 0xea)
+                    .ok()
+                    .map(AxDeviceEnum::from_net);
                 }
-                _ => {
-                    error!(
-                        "RTL8169: Unsupported device ID {:#x} at {:?}",
-                        dev_info.device_id, bdf
-                    );
-                    None
-                },
+                axdriver_pci::BarInfo::IO { .. } => {
+                    error!("realtek: BAR0 is of I/O type");
+                    return None;
+                }
             }
         }
     }
-    }
+}
 }
