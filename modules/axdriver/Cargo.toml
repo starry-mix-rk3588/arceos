@@ -42,6 +42,7 @@ sdmmc-gpt = [
 ]
 ixgbe = ["net", "axdriver_net/ixgbe", "dep:axalloc", "dep:axhal", "dep:axdma"]
 fxmac = ["net", "axdriver_net/fxmac", "dep:axalloc", "dep:axhal", "dep:axdma"]
+realtek = ["net", "axdriver_net/realtek", "dep:axalloc", "dep:axhal"]
 # more devices example: e1000 = ["net", "axdriver_net/e1000"]
 
 [dependencies]
@@ -54,7 +55,8 @@ axdriver_base = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev 
 axdriver_block = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470", optional = true }
 axdriver_display = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470", optional = true }
 axdriver_input = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470", optional = true }
-axdriver_net = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470", optional = true }
+# axdriver_net = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470", optional = true }
+axdriver_net = { path = "../../../crates/axdriver_crates/axdriver_net", optional = true}
 axdriver_pci = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470", optional = true }
 axdriver_vsock = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470", optional = true }
 axdriver_virtio = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470", optional = true }

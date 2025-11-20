@@ -76,6 +76,7 @@ driver-ramdisk = ["axdriver/ramdisk"]
 driver-sdmmc-gpt = ["axdriver/sdmmc-gpt"]
 driver-ixgbe = ["axdriver/ixgbe"]
 driver-fxmac = ["axdriver/fxmac"] # fxmac ethernet driver for PhytiumPi
+driver-realtek = ["axdriver/realtek"] # realtek r8169 ethernet driver
 driver-bcm2835-sdhci = ["axdriver/bcm2835-sdhci"]
 
 # Logging
