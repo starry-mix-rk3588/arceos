@@ -25,6 +25,7 @@ mod device;
 mod general;
 mod listen_table;
 pub mod options;
+pub mod raw;
 mod router;
 mod service;
 mod socket;
@@ -105,10 +106,10 @@ pub fn init_network(mut net_devs: AxDeviceContainer<AxNetDevice>) {
 
     let mut service = Service::new(router);
     service.iface.update_ip_addrs(|ip_addrs| {
-        ip_addrs.push(lo_ip.into()).unwrap();
         if let Some(eth0_ip) = eth0_ip {
             ip_addrs.push(eth0_ip.into()).unwrap();
         }
+        ip_addrs.push(lo_ip.into()).unwrap();
     });
     SERVICE.init_once(Mutex::new(service));
 

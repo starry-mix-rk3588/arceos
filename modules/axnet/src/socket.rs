@@ -14,6 +14,7 @@ use enum_dispatch::enum_dispatch;
 
 use crate::{
     options::{Configurable, GetSocketOption, SetSocketOption},
+    raw::RawSocket,
     tcp::TcpSocket,
     udp::UdpSocket,
     unix::{UnixSocket, UnixSocketAddr},
@@ -167,6 +168,7 @@ pub enum Socket {
     Udp(UdpSocket),
     Tcp(TcpSocket),
     Unix(UnixSocket),
+    Raw(RawSocket),
     #[cfg(feature = "vsock")]
     Vsock(VsockSocket),
 }
@@ -177,6 +179,7 @@ impl Pollable for Socket {
             Socket::Tcp(tcp) => tcp.poll(),
             Socket::Udp(udp) => udp.poll(),
             Socket::Unix(unix) => unix.poll(),
+            Socket::Raw(raw) => raw.poll(),
             #[cfg(feature = "vsock")]
             Socket::Vsock(vsock) => vsock.poll(),
         }
@@ -187,6 +190,7 @@ impl Pollable for Socket {
             Socket::Tcp(tcp) => tcp.register(context, events),
             Socket::Udp(udp) => udp.register(context, events),
             Socket::Unix(unix) => unix.register(context, events),
+            Socket::Raw(raw) => raw.register(context, events),
             #[cfg(feature = "vsock")]
             Socket::Vsock(vsock) => vsock.register(context, events),
         }

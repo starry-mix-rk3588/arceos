@@ -243,7 +243,7 @@ impl<G: BaseGuard> AxRunQueueRef<'_, G> {
     ///
     /// This function is used to add a new task to the scheduler.
     pub fn add_task(&mut self, task: AxTaskRef) {
-        debug!(
+        trace!(
             "task add: {} on run_queue {}",
             task.id_name(),
             self.inner.cpu_id
@@ -270,7 +270,7 @@ impl<G: BaseGuard> AxRunQueueRef<'_, G> {
         {
             // Since now, the task to be unblocked is in the `Ready` state.
             let cpu_id = self.inner.cpu_id;
-            debug!("task unblock: {} on run_queue {}", task_id_name, cpu_id);
+            trace!("task unblock: {} on run_queue {}", task_id_name, cpu_id);
             // Note: when the task is unblocked on another CPU's run queue,
             // we just ingiore the `resched` flag.
             if resched && cpu_id == this_cpu_id() {
@@ -372,7 +372,7 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
     /// This function will never return.
     pub fn exit_current(&mut self, exit_code: i32) -> ! {
         let curr = &self.current_task;
-        debug!("task exit: {}, exit_code={}", curr.id_name(), exit_code);
+        trace!("task exit: {}, exit_code={}", curr.id_name(), exit_code);
         assert!(curr.is_running(), "task is not running: {:?}", curr.state());
         assert!(!curr.is_idle());
         if curr.is_init() {
@@ -434,7 +434,7 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
         // queue. Note that the state may have been set as `Ready` in
         // `unblock_task()`, see `unblock_task()` for details.
 
-        debug!("task block: {}", curr.id_name());
+        trace!("task block: {}", curr.id_name());
         #[cfg(feature = "preempt")]
         {
             // TODO(mivik): magic little hack. why?
